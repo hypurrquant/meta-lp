@@ -2,6 +2,7 @@
 
 import { ArrowRight, BarChart3, MessageCircle, Shield, TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export function HeroSection() {
   return (
@@ -43,13 +44,15 @@ export function HeroSection() {
 
         {/* CTA Buttons */}
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 px-8 text-base hover:from-indigo-600 hover:to-purple-700"
-          >
-            Launch App
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <Link href="/app">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 px-8 text-base hover:from-indigo-600 hover:to-purple-700"
+            >
+              Launch App
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </div>
 
         {/* Feature Pills */}

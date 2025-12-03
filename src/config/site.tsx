@@ -3,6 +3,7 @@ import {
   Compass,
   type LucideIcon,
   Vault,
+  Vote,
   Wallet,
 } from "lucide-react";
 
@@ -31,13 +32,18 @@ export const navigations: Navigation[] = [
     href: "/app/explore",
   },
   {
-    icon: BarChart3,
-    name: "Analytics",
-    href: "/app/analytics",
-  },
-  {
     icon: Vault,
     name: "Vaults",
     href: "/app/vaults",
+  },
+  {
+    icon: Vote,
+    name: "Vote",
+    href: "/app/vote",
+  },
+  {
+    icon: BarChart3,
+    name: "Analytics",
+    href: "/app/analytics",
   },
 ];

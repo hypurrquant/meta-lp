@@ -1,6 +1,6 @@
 "use client";
 
-import { DollarSign, PiggyBank, Shield, TrendingUp } from "lucide-react";
+import { DollarSign, PiggyBank, Shield, TrendingUp, Zap, Coins } from "lucide-react";
 import type { portfolioSummary as PortfolioSummaryType } from "@/data/mock-positions";
 
 interface PortfolioSummaryProps {
@@ -26,6 +26,14 @@ export function PortfolioSummary({ summary }: PortfolioSummaryProps) {
       iconColor: "text-emerald-400",
     },
     {
+      label: "Unclaimed Fees",
+      value: `$${summary.totalUnclaimedFees.toLocaleString()}`,
+      icon: Coins,
+      color: "text-amber-400",
+      bgColor: "bg-amber-500/10",
+      iconColor: "text-amber-400",
+    },
+    {
       label: "Real ROI",
       value: `+$${summary.totalRealRoi.toLocaleString()}`,
       icon: TrendingUp,
@@ -34,17 +42,25 @@ export function PortfolioSummary({ summary }: PortfolioSummaryProps) {
       iconColor: "text-emerald-400",
     },
     {
-      label: "Insured Positions",
+      label: "Insured",
       value: `${summary.insuredCount}/${summary.positionCount}`,
       icon: Shield,
       color: "text-foreground",
-      bgColor: "bg-amber-500/10",
-      iconColor: "text-amber-400",
+      bgColor: "bg-emerald-500/10",
+      iconColor: "text-emerald-400",
+    },
+    {
+      label: "Automated",
+      value: `${summary.automatedCount}/${summary.positionCount}`,
+      icon: Zap,
+      color: "text-foreground",
+      bgColor: "bg-indigo-500/10",
+      iconColor: "text-indigo-400",
     },
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {stats.map((stat) => (
         <div
           key={stat.label}
