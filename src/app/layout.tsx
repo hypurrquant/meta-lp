@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
-import { Gabarito } from "next/font/google";
-import { SideNav } from "@/components/nav";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import "@/style/globals.css";
 import { Providers } from "./providers";
 
-const gabarito = Gabarito({ subsets: ["latin"], variable: "--font-gabarito" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter"
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono"
+});
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -19,13 +26,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={cn("bg-background font-sans", gabarito.variable)}>
+    <html lang="en" suppressHydrationWarning className="dark">
+      <body className={cn(
+        "min-h-screen bg-background font-sans antialiased",
+        inter.variable,
+        jetbrainsMono.variable
+      )}>
         <Providers>
-          <div className="flex min-h-[100dvh]">
-            <SideNav />
-            <div className="flex-grow overflow-auto">{children}</div>
-          </div>
+          {children}
         </Providers>
       </body>
     </html>

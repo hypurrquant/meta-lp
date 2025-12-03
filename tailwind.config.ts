@@ -21,7 +21,8 @@ const config = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-gabarito)", ...fontFamily.sans],
+        sans: ["var(--font-inter)", ...fontFamily.sans],
+        mono: ["var(--font-mono)", ...fontFamily.mono],
       },
       screens: {
         phone: "370px",
