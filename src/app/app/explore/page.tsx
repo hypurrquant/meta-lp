@@ -3,141 +3,66 @@
 import { useState, useMemo } from "react";
 import {
   ArrowRight,
-  ChevronDown,
-  ChevronUp,
   Copy,
   Search,
   Shield,
-  TrendingUp,
   X,
-  Clock,
-  DollarSign,
-  Percent,
-  Activity,
-  ChevronRight,
+  ChevronDown,
   Sparkles,
-  Info,
   Check,
 } from "lucide-react";
 import {
   explorePositions,
   chains,
-  dexes,
   type ExplorePosition,
 } from "@/data/mock-explore-positions";
 import { cn } from "@/lib/utils";
 
-type SortKey = "pool" | "roi" | "apy" | "value" | "duration" | "fees";
-type SortDirection = "asc" | "desc";
+type SortKey = "roi" | "apy" | "value";
 
-// Chain colors/icons
+// Chain colors
 const chainColors: Record<string, string> = {
-  Ethereum: "bg-blue-500/20 text-blue-400",
-  Arbitrum: "bg-sky-500/20 text-sky-400",
-  Base: "bg-blue-600/20 text-blue-300",
-  Optimism: "bg-red-500/20 text-red-400",
-  Polygon: "bg-purple-500/20 text-purple-400",
-  HyperEVM: "bg-emerald-500/20 text-emerald-400",
+  Ethereum: "bg-blue-500",
+  Arbitrum: "bg-sky-500",
+  Base: "bg-blue-600",
+  Optimism: "bg-red-500",
+  Polygon: "bg-purple-500",
+  HyperEVM: "bg-emerald-500",
 };
 
-// Sortable Table Header Component
-function SortableHeader({
-  label,
-  sortKey,
-  currentSort,
-  currentDirection,
-  onSort,
-  align = "left",
-}: {
-  label: string;
-  sortKey: SortKey;
-  currentSort: SortKey;
-  currentDirection: SortDirection;
-  onSort: (key: SortKey) => void;
-  align?: "left" | "right" | "center";
-}) {
-  const isActive = currentSort === sortKey;
-
-  return (
-    <th
-      className={cn(
-        "cursor-pointer px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground",
-        align === "right" && "text-right",
-        align === "center" && "text-center"
-      )}
-      onClick={() => onSort(sortKey)}
-    >
-      <div
-        className={cn(
-          "inline-flex items-center gap-1",
-          align === "right" && "flex-row-reverse"
-        )}
-      >
-        {label}
-        <span className="flex flex-col">
-          <ChevronUp
-            className={cn(
-              "h-3 w-3 -mb-1",
-              isActive && currentDirection === "asc"
-                ? "text-indigo-400"
-                : "text-muted-foreground/40"
-            )}
-          />
-          <ChevronDown
-            className={cn(
-              "h-3 w-3 -mt-1",
-              isActive && currentDirection === "desc"
-                ? "text-indigo-400"
-                : "text-muted-foreground/40"
-            )}
-          />
-        </span>
-      </div>
-    </th>
-  );
-}
-
-// Position Table Row
-function PositionTableRow({
+// Simple Position Card for both mobile and desktop
+function PositionCard({
   position,
-  isExpanded,
-  onToggle,
   onCopy,
 }: {
   position: ExplorePosition;
-  isExpanded: boolean;
-  onToggle: () => void;
   onCopy: (position: ExplorePosition) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <>
-      {/* Main Row */}
-      <tr
-        className={cn(
-          "border-b border-border/30 cursor-pointer transition-colors",
-          isExpanded ? "bg-muted/50" : "hover:bg-muted/30"
-        )}
-        onClick={onToggle}
+    <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+      {/* Main Card - Always visible */}
+      <div
+        className="p-4 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
       >
-        {/* Pool */}
-        <td className="px-4 py-4">
+        {/* Header Row */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold",
-                chainColors[position.chain] || "bg-gray-600 text-white"
+                "h-10 w-10 rounded-lg flex items-center justify-center text-white text-xs font-bold",
+                chainColors[position.chain] || "bg-gray-500"
               )}
             >
               {position.chain.slice(0, 2).toUpperCase()}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{position.pool}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                  {position.feeTier}%
-                </span>
+                <span className="font-semibold">{position.pool}</span>
                 {position.isInsured && (
-                  <Shield className="h-3.5 w-3.5 text-emerald-400" />
+                  <Shield className="h-4 w-4 text-emerald-400" />
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -145,284 +70,116 @@ function PositionTableRow({
               </p>
             </div>
           </div>
-        </td>
-
-        {/* Value */}
-        <td className="px-4 py-4 text-right">
-          <p className="font-medium">
-            ${position.currentBalance.totalValueUsd.toLocaleString()}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            from ${position.initialPortfolio.totalValueUsd.toLocaleString()}
-          </p>
-        </td>
-
-        {/* ROI */}
-        <td className="px-4 py-4 text-right">
-          <p
-            className={cn(
-              "font-semibold",
-              position.performance.roiPercent >= 0
-                ? "text-emerald-400"
-                : "text-red-400"
-            )}
-          >
-            {position.performance.roiPercent >= 0 ? "+" : ""}
-            {position.performance.roiPercent}%
-          </p>
-          <p className="text-xs text-muted-foreground">
-            ${position.performance.roiUsd.toLocaleString()}
-          </p>
-        </td>
-
-        {/* APY */}
-        <td className="px-4 py-4 text-right">
-          <p className="font-semibold text-emerald-400">
-            {position.performance.apy}%
-          </p>
-        </td>
-
-        {/* Fees Earned */}
-        <td className="px-4 py-4 text-right">
-          <p className="font-medium text-emerald-400">
-            +${position.performance.feesEarned.toLocaleString()}
-          </p>
-          <p className="text-xs text-red-400">
-            -${position.performance.ilLoss.toLocaleString()} IL
-          </p>
-        </td>
-
-        {/* Duration */}
-        <td className="px-4 py-4 text-center">
-          <span className="font-medium">{position.durationDays}d</span>
-        </td>
-
-        {/* Price Range Status */}
-        <td className="px-4 py-4 text-center">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
-              position.priceRange.inRange
-                ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-amber-500/20 text-amber-400"
-            )}
-          >
-            {position.priceRange.inRange ? "In Range" : "Out"}
-          </span>
-        </td>
-
-        {/* Expand Icon */}
-        <td className="px-4 py-4">
-          <ChevronRight
+          <ChevronDown
             className={cn(
               "h-5 w-5 text-muted-foreground transition-transform",
-              isExpanded && "rotate-90"
+              expanded && "rotate-180"
             )}
           />
-        </td>
-      </tr>
+        </div>
 
-      {/* Expanded Detail Row */}
-      {isExpanded && (
-        <tr className="border-b border-border/30 bg-muted/30">
-          <td colSpan={8} className="px-4 py-0">
-            <div className="py-6">
-              <div className="grid gap-6 lg:grid-cols-3">
-                {/* Portfolio Details */}
-                <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-                  <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                    <DollarSign className="h-4 w-4 text-indigo-400" />
-                    Portfolio
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Initial ({position.initialPortfolio.date})
-                      </p>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>
-                          {position.initialPortfolio.token0.amount}{" "}
-                          {position.token0}
-                        </span>
-                        <span className="text-muted-foreground">
-                          $
-                          {position.initialPortfolio.token0.valueUsd.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>
-                          {position.initialPortfolio.token1.amount.toLocaleString()}{" "}
-                          {position.token1}
-                        </span>
-                        <span className="text-muted-foreground">
-                          $
-                          {position.initialPortfolio.token1.valueUsd.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="border-t border-border/50 pt-3">
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Current
-                      </p>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>
-                          {position.currentBalance.token0.amount.toFixed(2)}{" "}
-                          {position.token0}
-                        </span>
-                        <span className="text-muted-foreground">
-                          $
-                          {position.currentBalance.token0.valueUsd.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>
-                          {position.currentBalance.token1.amount.toLocaleString()}{" "}
-                          {position.token1}
-                        </span>
-                        <span className="text-muted-foreground">
-                          $
-                          {position.currentBalance.token1.valueUsd.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        {/* Key Metrics - Always visible */}
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">ROI</p>
+            <p className="text-lg font-bold text-emerald-400">
+              +{position.performance.roiPercent}%
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">APY</p>
+            <p className="text-lg font-bold">{position.performance.apy}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Value</p>
+            <p className="text-lg font-bold">
+              ${(position.currentBalance.totalValueUsd / 1000).toFixed(1)}K
+            </p>
+          </div>
+        </div>
+      </div>
 
-                {/* Performance Breakdown */}
-                <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-                  <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                    <Activity className="h-4 w-4 text-emerald-400" />
-                    Performance Breakdown
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Fees Earned
-                      </span>
-                      <span className="font-medium text-emerald-400">
-                        +${position.performance.feesEarned.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        IL Loss
-                      </span>
-                      <span className="font-medium text-red-400">
-                        -${position.performance.ilLoss.toLocaleString()}
-                      </span>
-                    </div>
-                    {position.performance.insuranceClaim > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Insurance Claim
-                        </span>
-                        <span className="font-medium text-emerald-400">
-                          +${position.performance.insuranceClaim.toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="border-t border-border/50 pt-3 flex items-center justify-between">
-                      <span className="font-medium">Net Profit</span>
-                      <span className="font-semibold text-emerald-400">
-                        +${position.performance.roiUsd.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Est. APY</span>
-                      <span className="font-semibold text-emerald-400">
-                        {position.performance.apy}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Price Range */}
-                <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-                  <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                    <Percent className="h-4 w-4 text-purple-400" />
-                    Price Range
-                  </h4>
-                  <div className="space-y-4">
-                    {/* Visual Range */}
-                    <div className="relative h-3 rounded-full bg-muted">
-                      <div
-                        className="absolute h-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                        style={{ left: "15%", right: "15%" }}
-                      />
-                      <div
-                        className="absolute top-1/2 h-4 w-1 -translate-y-1/2 rounded bg-emerald-400"
-                        style={{
-                          left: `${
-                            ((position.priceRange.current -
-                              position.priceRange.min) /
-                              (position.priceRange.max -
-                                position.priceRange.min)) *
-                              70 +
-                            15
-                          }%`,
-                        }}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Min</p>
-                        <p className="font-medium">
-                          ${position.priceRange.min.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-emerald-400">Current</p>
-                        <p className="font-medium text-emerald-400">
-                          ${position.priceRange.current.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Max</p>
-                        <p className="font-medium">
-                          ${position.priceRange.max.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {position.isInsured && (
-                      <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-2 text-sm text-emerald-400">
-                        <Shield className="h-4 w-4" />
-                        <span>IL Insurance Active</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-6 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    Position opened on {position.initialPortfolio.date}
-                  </span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCopy(position);
-                  }}
-                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-2.5 text-sm font-medium text-white transition-all hover:from-indigo-600 hover:to-purple-700"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy This Position
-                </button>
-              </div>
+      {/* Expanded Details */}
+      {expanded && (
+        <div className="border-t border-border/50 p-4 bg-muted/20 space-y-4">
+          {/* Performance */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Fees Earned</span>
+              <span className="text-emerald-400">
+                +${position.performance.feesEarned.toLocaleString()}
+              </span>
             </div>
-          </td>
-        </tr>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">IL Loss</span>
+              <span className="text-red-400">
+                -${position.performance.ilLoss.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Duration</span>
+              <span>{position.durationDays} days</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Status</span>
+              <span
+                className={
+                  position.priceRange.inRange
+                    ? "text-emerald-400"
+                    : "text-amber-400"
+                }
+              >
+                {position.priceRange.inRange ? "In Range" : "Out of Range"}
+              </span>
+            </div>
+          </div>
+
+          {/* Price Range Bar */}
+          <div>
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>${position.priceRange.min.toLocaleString()}</span>
+              <span className="text-emerald-400">
+                ${position.priceRange.current.toLocaleString()}
+              </span>
+              <span>${position.priceRange.max.toLocaleString()}</span>
+            </div>
+            <div className="h-2 rounded-full bg-muted relative">
+              <div
+                className="absolute h-2 rounded-full bg-indigo-500/50"
+                style={{ left: "15%", right: "15%" }}
+              />
+              <div
+                className="absolute h-3 w-1 -top-0.5 rounded bg-emerald-400"
+                style={{
+                  left: `${
+                    ((position.priceRange.current - position.priceRange.min) /
+                      (position.priceRange.max - position.priceRange.min)) *
+                      70 +
+                    15
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Copy Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopy(position);
+            }}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-500 py-3 text-sm font-medium text-white hover:bg-indigo-600 transition-colors"
+          >
+            <Copy className="h-4 w-4" />
+            Copy This Strategy
+          </button>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
-// Copy Position Modal
+// Simplified Copy Modal
 function CopyModal({
   position,
   onClose,
@@ -431,80 +188,40 @@ function CopyModal({
   onClose: () => void;
 }) {
   const [selectedChain, setSelectedChain] = useState(position.chain);
-  const [useSameRange, setUseSameRange] = useState(true);
   const [enableInsurance, setEnableInsurance] = useState(position.isInsured);
-  const [amount0, setAmount0] = useState(
-    position.initialPortfolio.token0.amount.toString()
-  );
-  const [amount1, setAmount1] = useState(
-    position.initialPortfolio.token1.amount.toString()
-  );
 
   const needsBridge = selectedChain !== position.chain;
-  const token0Price =
-    position.initialPortfolio.token0.valueUsd /
-    position.initialPortfolio.token0.amount;
-  const token1Price =
-    position.initialPortfolio.token1.valueUsd /
-    position.initialPortfolio.token1.amount;
-  const totalDeposit =
-    parseFloat(amount0) * token0Price + parseFloat(amount1) * token1Price;
-  const insuranceFee = enableInsurance ? totalDeposit * 0.005 : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-border bg-card">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border p-6">
+        <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card p-4">
           <div>
-            <h2 className="text-xl font-bold">Copy Position</h2>
-            <p className="text-sm text-muted-foreground">
-              Mint a new position with the same strategy
-            </p>
+            <h2 className="text-lg font-bold">Copy Position</h2>
+            <p className="text-sm text-muted-foreground">{position.pool}</p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="rounded-lg p-2 hover:bg-muted"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Original Position Summary */}
-          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold",
-                    chainColors[position.chain]
-                  )}
-                >
-                  {position.chain.slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold">{position.pool}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {position.dex} • {position.chain}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-emerald-400">
-                  +{position.performance.roiPercent}% ROI
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {position.performance.apy}% APY
-                </p>
-              </div>
-            </div>
+        <div className="p-4 space-y-4">
+          {/* Original Performance */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+            <span className="text-sm text-emerald-400">Original ROI</span>
+            <span className="text-lg font-bold text-emerald-400">
+              +{position.performance.roiPercent}%
+            </span>
           </div>
 
           {/* Chain Selection */}
           <div>
-            <label className="mb-2 block text-sm font-medium">
-              Deploy Chain
+            <label className="block text-sm font-medium mb-2">
+              Deploy on
             </label>
             <select
               value={selectedChain}
@@ -520,223 +237,40 @@ function CopyModal({
                 ))}
             </select>
             {needsBridge && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-400">
+              <p className="mt-2 text-sm text-amber-400 flex items-center gap-1">
                 <ArrowRight className="h-4 w-4" />
-                Bridge required from {position.chain} to {selectedChain}
-              </div>
+                Bridge required
+              </p>
             )}
           </div>
 
-          {/* Deposit Amount */}
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Deposit Amount
-            </label>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-3">
-                <span className="font-medium w-16">{position.token0}</span>
-                <input
-                  type="number"
-                  value={amount0}
-                  onChange={(e) => setAmount0(e.target.value)}
-                  className="flex-1 bg-transparent text-right outline-none"
-                />
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-3">
-                <span className="font-medium w-16">{position.token1}</span>
-                <input
-                  type="number"
-                  value={amount1}
-                  onChange={(e) => setAmount1(e.target.value)}
-                  className="flex-1 bg-transparent text-right outline-none"
-                />
-              </div>
+          {/* IL Insurance Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-emerald-400" />
+              <span className="text-sm font-medium">IL Insurance</span>
             </div>
-          </div>
-
-          {/* Price Range */}
-          <div>
-            <label className="mb-3 block text-sm font-medium">
-              Price Range
-            </label>
-            <div className="space-y-2">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="radio"
-                  checked={useSameRange}
-                  onChange={() => setUseSameRange(true)}
-                  className="h-4 w-4 accent-indigo-500"
-                />
-                <span className="text-sm">
-                  Use same range: ${position.priceRange.min.toLocaleString()} - $
-                  {position.priceRange.max.toLocaleString()}
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="radio"
-                  checked={!useSameRange}
-                  onChange={() => setUseSameRange(false)}
-                  className="h-4 w-4 accent-indigo-500"
-                />
-                <span className="text-sm">Custom range</span>
-              </label>
-            </div>
-          </div>
-
-          {/* IL Insurance */}
-          <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
-            <label className="flex cursor-pointer items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-emerald-400" />
-                <div>
-                  <p className="font-medium">Enable IL Insurance</p>
-                  <p className="text-xs text-muted-foreground">
-                    Coverage: Up to 80% IL protected
-                  </p>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={enableInsurance}
-                onChange={(e) => setEnableInsurance(e.target.checked)}
-                className="h-5 w-5 accent-emerald-500"
-              />
-            </label>
-          </div>
-
-          {/* Summary */}
-          <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
-            <h4 className="mb-3 font-medium">Summary</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Deposit</span>
-                <span className="font-medium">
-                  ${totalDeposit.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Gas Fee (est.)</span>
-                <span>~$2.50</span>
-              </div>
-              {enableInsurance && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    IL Insurance (0.5%)
-                  </span>
-                  <span>${insuranceFee.toFixed(2)}</span>
-                </div>
-              )}
-              {needsBridge && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Bridge Fee (est.)
-                  </span>
-                  <span>~$1.00</span>
-                </div>
-              )}
-              <div className="border-t border-border pt-2">
-                <div className="flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>
-                    $
-                    {(
-                      totalDeposit +
-                      2.5 +
-                      insuranceFee +
-                      (needsBridge ? 1 : 0)
-                    ).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
             <button
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-border bg-background py-3 text-sm font-medium transition-colors hover:bg-muted"
+              onClick={() => setEnableInsurance(!enableInsurance)}
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors relative",
+                enableInsurance ? "bg-emerald-500" : "bg-muted"
+              )}
             >
-              Cancel
+              <div
+                className={cn(
+                  "absolute top-1 h-4 w-4 rounded-full bg-white transition-all",
+                  enableInsurance ? "left-7" : "left-1"
+                )}
+              />
             </button>
-            <button className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-medium text-white transition-all hover:from-indigo-600 hover:to-purple-700">
-              <Check className="h-4 w-4" />
-              {needsBridge ? "Bridge & Mint" : "Mint Position"}
-            </button>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-// Stats Cards
-function StatsCards() {
-  const totalValue = explorePositions.reduce(
-    (sum, p) => sum + p.currentBalance.totalValueUsd,
-    0
-  );
-  const avgRoi =
-    explorePositions.reduce((sum, p) => sum + p.performance.roiPercent, 0) /
-    explorePositions.length;
-  const avgApy =
-    explorePositions.reduce((sum, p) => sum + p.performance.apy, 0) /
-    explorePositions.length;
-  const insuredCount = explorePositions.filter((p) => p.isInsured).length;
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-indigo-500/10 p-2">
-            <DollarSign className="h-5 w-5 text-indigo-400" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Total Value Tracked</p>
-            <p className="text-lg font-semibold">
-              ${(totalValue / 1000).toFixed(0)}K
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-emerald-500/10 p-2">
-            <TrendingUp className="h-5 w-5 text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Average ROI</p>
-            <p className="text-lg font-semibold text-emerald-400">
-              +{avgRoi.toFixed(1)}%
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-purple-500/10 p-2">
-            <Percent className="h-5 w-5 text-purple-400" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Average APY</p>
-            <p className="text-lg font-semibold text-purple-400">
-              {avgApy.toFixed(1)}%
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-emerald-500/10 p-2">
-            <Shield className="h-5 w-5 text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">IL Insured</p>
-            <p className="text-lg font-semibold">
-              {insuredCount}/{explorePositions.length}
-            </p>
-          </div>
+          {/* Action */}
+          <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-500 py-4 text-sm font-medium text-white hover:bg-indigo-600">
+            <Check className="h-4 w-4" />
+            {needsBridge ? "Bridge & Mint" : "Mint Position"}
+          </button>
         </div>
       </div>
     </div>
@@ -744,39 +278,18 @@ function StatsCards() {
 }
 
 export default function ExplorePage() {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [copyPosition, setCopyPosition] = useState<ExplorePosition | null>(
-    null
-  );
+  const [copyPosition, setCopyPosition] = useState<ExplorePosition | null>(null);
   const [chainFilter, setChainFilter] = useState("all");
-  const [dexFilter, setDexFilter] = useState("all");
-  const [sortKey, setSortKey] = useState<SortKey>("roi");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortBy, setSortBy] = useState<SortKey>("roi");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Handle sort
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDirection("desc");
-    }
-  };
-
-  // Filter and sort positions
+  // Filter and sort
   const displayedPositions = useMemo(() => {
     let filtered = [...explorePositions];
 
-    // Apply filters
     if (chainFilter !== "all") {
       filtered = filtered.filter(
         (p) => p.chain.toLowerCase() === chainFilter
-      );
-    }
-    if (dexFilter !== "all") {
-      filtered = filtered.filter((p) =>
-        p.dex.toLowerCase().includes(dexFilter)
       );
     }
     if (searchQuery) {
@@ -785,195 +298,110 @@ export default function ExplorePage() {
       );
     }
 
-    // Sort
     filtered.sort((a, b) => {
-      let comparison = 0;
-      switch (sortKey) {
-        case "pool":
-          comparison = a.pool.localeCompare(b.pool);
-          break;
+      switch (sortBy) {
         case "roi":
-          comparison = a.performance.roiPercent - b.performance.roiPercent;
-          break;
+          return b.performance.roiPercent - a.performance.roiPercent;
         case "apy":
-          comparison = a.performance.apy - b.performance.apy;
-          break;
+          return b.performance.apy - a.performance.apy;
         case "value":
-          comparison =
-            a.currentBalance.totalValueUsd - b.currentBalance.totalValueUsd;
-          break;
-        case "duration":
-          comparison = a.durationDays - b.durationDays;
-          break;
-        case "fees":
-          comparison = a.performance.feesEarned - b.performance.feesEarned;
-          break;
+          return b.currentBalance.totalValueUsd - a.currentBalance.totalValueUsd;
+        default:
+          return 0;
       }
-      return sortDirection === "asc" ? comparison : -comparison;
     });
 
     return filtered;
-  }, [chainFilter, dexFilter, searchQuery, sortKey, sortDirection]);
+  }, [chainFilter, searchQuery, sortBy]);
+
+  // Stats
+  const avgRoi =
+    explorePositions.reduce((sum, p) => sum + p.performance.roiPercent, 0) /
+    explorePositions.length;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border/50 bg-card/30 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Explore Positions</h1>
-            <p className="text-sm text-muted-foreground">
-              Discover profitable LP strategies and copy them with one click
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="h-4 w-4 text-indigo-400" />
-            <span>{explorePositions.length} strategies available</span>
-          </div>
-        </div>
+      <div className="border-b border-border/50 bg-card/30 px-4 py-4">
+        <h1 className="text-xl font-bold">Explore</h1>
+        <p className="text-sm text-muted-foreground">
+          Copy profitable LP strategies
+        </p>
       </div>
 
       {/* Content */}
-      <div className="p-6 space-y-6">
-        {/* Stats Cards */}
-        <StatsCards />
+      <div className="p-4 space-y-4">
+        {/* Quick Stats */}
+        <div className="flex items-center gap-4 p-3 rounded-lg bg-card/50 border border-border/50">
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Avg ROI</p>
+            <p className="text-lg font-bold text-emerald-400">
+              +{avgRoi.toFixed(1)}%
+            </p>
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Strategies</p>
+            <p className="text-lg font-bold">{explorePositions.length}</p>
+          </div>
+          <div className="flex items-center gap-1 text-indigo-400">
+            <Sparkles className="h-4 w-4" />
+            <span className="text-sm font-medium">Live</span>
+          </div>
+        </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative flex-1 min-w-[200px]">
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search pools..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm"
             />
           </div>
-          <select
-            value={chainFilter}
-            onChange={(e) => setChainFilter(e.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            {chains.map((chain) => (
-              <option key={chain.id} value={chain.id}>
-                {chain.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={dexFilter}
-            onChange={(e) => setDexFilter(e.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            {dexes.map((dex) => (
-              <option key={dex.id} value={dex.id}>
-                {dex.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Positions Table */}
-        <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/30">
-                <tr className="border-b border-border/30">
-                  <SortableHeader
-                    label="Pool"
-                    sortKey="pool"
-                    currentSort={sortKey}
-                    currentDirection={sortDirection}
-                    onSort={handleSort}
-                  />
-                  <SortableHeader
-                    label="Value"
-                    sortKey="value"
-                    currentSort={sortKey}
-                    currentDirection={sortDirection}
-                    onSort={handleSort}
-                    align="right"
-                  />
-                  <SortableHeader
-                    label="ROI"
-                    sortKey="roi"
-                    currentSort={sortKey}
-                    currentDirection={sortDirection}
-                    onSort={handleSort}
-                    align="right"
-                  />
-                  <SortableHeader
-                    label="APY"
-                    sortKey="apy"
-                    currentSort={sortKey}
-                    currentDirection={sortDirection}
-                    onSort={handleSort}
-                    align="right"
-                  />
-                  <SortableHeader
-                    label="Fees/IL"
-                    sortKey="fees"
-                    currentSort={sortKey}
-                    currentDirection={sortDirection}
-                    onSort={handleSort}
-                    align="right"
-                  />
-                  <SortableHeader
-                    label="Days"
-                    sortKey="duration"
-                    currentSort={sortKey}
-                    currentDirection={sortDirection}
-                    onSort={handleSort}
-                    align="center"
-                  />
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground text-center">
-                    Range
-                  </th>
-                  <th className="px-4 py-3 w-12"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayedPositions.map((position) => (
-                  <PositionTableRow
-                    key={position.id}
-                    position={position}
-                    isExpanded={expandedId === position.id}
-                    onToggle={() =>
-                      setExpandedId(
-                        expandedId === position.id ? null : position.id
-                      )
-                    }
-                    onCopy={setCopyPosition}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {displayedPositions.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Search className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No positions found</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Try adjusting your filters
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex items-start gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-4">
-          <Info className="h-5 w-5 flex-shrink-0 text-indigo-400 mt-0.5" />
-          <div className="text-sm text-indigo-400">
-            <p className="font-medium">How it works</p>
-            <p className="mt-1 text-indigo-400/80">
-              Click on any row to see detailed performance breakdown. Find a
-              strategy you like and copy it with one click - we&apos;ll handle the
-              bridging and minting for you.
-            </p>
+          <div className="flex gap-2">
+            <select
+              value={chainFilter}
+              onChange={(e) => setChainFilter(e.target.value)}
+              className="flex-1 sm:flex-none rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
+            >
+              {chains.map((chain) => (
+                <option key={chain.id} value={chain.id}>
+                  {chain.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortKey)}
+              className="flex-1 sm:flex-none rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
+            >
+              <option value="roi">Sort: ROI</option>
+              <option value="apy">Sort: APY</option>
+              <option value="value">Sort: Value</option>
+            </select>
           </div>
         </div>
+
+        {/* Position Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {displayedPositions.map((position) => (
+            <PositionCard
+              key={position.id}
+              position={position}
+              onCopy={setCopyPosition}
+            />
+          ))}
+        </div>
+
+        {displayedPositions.length === 0 && (
+          <div className="py-12 text-center">
+            <Search className="h-12 w-12 mx-auto text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">No positions found</p>
+          </div>
+        )}
       </div>
 
       {/* Copy Modal */}

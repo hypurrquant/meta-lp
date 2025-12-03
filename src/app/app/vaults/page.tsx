@@ -2,172 +2,159 @@
 
 import { useState, useMemo } from "react";
 import {
-  ArrowUpDown,
-  Clock,
   DollarSign,
-  Info,
   Shield,
-  Target,
-  TrendingUp,
   Vault,
   X,
-  Zap,
+  ChevronDown,
 } from "lucide-react";
-import { stableVault, lpVaults, vaultHistory, vaultStats, riskLevelInfo, type LPVault } from "@/data/mock-vaults";
+import { stableVault, lpVaults, type LPVault } from "@/data/mock-vaults";
 import { cn } from "@/lib/utils";
 
-type SortKey = "name" | "totalCap" | "currentRoi" | "status" | "riskLevel";
-type SortOrder = "asc" | "desc";
-
 const statusConfig = {
-  active: { color: "text-emerald-400", bg: "bg-emerald-500", dotBg: "bg-emerald-500", label: "Active" },
-  closing: { color: "text-amber-400", bg: "bg-amber-500", dotBg: "bg-amber-500", label: "Closing" },
-  completed: { color: "text-muted-foreground", bg: "bg-muted-foreground", dotBg: "bg-muted-foreground", label: "Closed" },
+  active: { color: "text-emerald-400", bg: "bg-emerald-500", label: "Active" },
+  closing: { color: "text-amber-400", bg: "bg-amber-500", label: "Closing" },
+  completed: { color: "text-muted-foreground", bg: "bg-muted-foreground", label: "Closed" },
 };
 
-const riskOrder = { conservative: 1, balanced: 2, growth: 3, aggressive: 4 };
+const riskConfig = {
+  conservative: { color: "text-emerald-400", label: "Low" },
+  balanced: { color: "text-blue-400", label: "Med" },
+  growth: { color: "text-amber-400", label: "Med+" },
+  aggressive: { color: "text-red-400", label: "High" },
+};
 
-// Vault Table Row Component
-function VaultRow({
+// Vault Card Component
+function VaultCard({
   vault,
   onDeposit,
 }: {
   vault: LPVault;
   onDeposit: (vault: LPVault) => void;
 }) {
-  const riskInfo = riskLevelInfo[vault.riskLevel];
+  const [expanded, setExpanded] = useState(false);
+  const status = statusConfig[vault.status];
+  const risk = riskConfig[vault.riskLevel];
   const capacityPercent = (vault.currentDeposit / vault.totalCap) * 100;
-  const roiPercent = (vault.currentRoi / vault.targetRoi) * 100;
-  const remainingCap = vault.totalCap - vault.currentDeposit;
-  const isFull = remainingCap <= 0;
 
   return (
-    <tr className="group border-b border-border/30 transition-colors hover:bg-muted/30">
-      {/* Vault Name & Strategy */}
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl",
-            vault.riskLevel === "conservative" && "bg-emerald-500/20",
-            vault.riskLevel === "balanced" && "bg-blue-500/20",
-            vault.riskLevel === "growth" && "bg-amber-500/20",
-            vault.riskLevel === "aggressive" && "bg-red-500/20"
-          )}>
-            <Vault className={cn(
-              "h-5 w-5",
-              vault.riskLevel === "conservative" && "text-emerald-400",
-              vault.riskLevel === "balanced" && "text-blue-400",
-              vault.riskLevel === "growth" && "text-amber-400",
-              vault.riskLevel === "aggressive" && "text-red-400"
-            )} />
+    <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+      {/* Main Card */}
+      <div
+        className="p-4 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+              <Vault className="h-5 w-5 text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold">{vault.name}</h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className={status.color}>{status.label}</span>
+                <span className="text-muted-foreground">•</span>
+                <span className={risk.color}>{risk.label} Risk</span>
+              </div>
+            </div>
+          </div>
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 text-muted-foreground transition-transform",
+              expanded && "rotate-180"
+            )}
+          />
+        </div>
+
+        {/* Key Metrics */}
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Target ROI</p>
+            <p className="text-lg font-bold text-emerald-400">
+              {vault.targetRoi}%
+            </p>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{vault.name}</span>
-              {vault.userDeposit && vault.userDeposit > 0 && (
-                <span className="rounded-full bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-medium text-indigo-400">
-                  DEPOSITED
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{vault.strategy}</p>
+            <p className="text-xs text-muted-foreground">Current</p>
+            <p className="text-lg font-bold">
+              {vault.currentRoi}%
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Duration</p>
+            <p className="text-lg font-bold">{vault.estimatedDays}d</p>
           </div>
         </div>
-      </td>
 
-      {/* Risk Level */}
-      <td className="px-4 py-4">
-        <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", riskInfo.color)}>
-          {riskInfo.label}
-        </span>
-      </td>
-
-      {/* Status */}
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-2">
-          <div className={cn("h-2 w-2 rounded-full", statusConfig[vault.status].dotBg)} />
-          <span className={cn("text-sm", statusConfig[vault.status].color)}>
-            {statusConfig[vault.status].label}
-          </span>
-        </div>
-      </td>
-
-      {/* Capacity */}
-      <td className="px-4 py-4">
-        <div className="w-32">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">${vault.currentDeposit}</span>
-            <span className="text-muted-foreground">/ ${vault.totalCap}</span>
+        {/* Capacity Bar */}
+        <div className="mt-3">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>Capacity</span>
+            <span>{capacityPercent.toFixed(0)}%</span>
           </div>
-          <div className="mt-1.5 h-1.5 rounded-full bg-muted">
+          <div className="h-2 rounded-full bg-muted">
             <div
               className={cn(
                 "h-full rounded-full transition-all",
-                capacityPercent >= 100 ? "bg-amber-500" : "bg-gradient-to-r from-indigo-500 to-purple-500"
+                capacityPercent > 90 ? "bg-red-500" : "bg-indigo-500"
               )}
-              style={{ width: `${Math.min(capacityPercent, 100)}%` }}
+              style={{ width: `${capacityPercent}%` }}
             />
           </div>
         </div>
-      </td>
+      </div>
 
-      {/* ROI Progress */}
-      <td className="px-4 py-4">
-        <div className="w-28">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-emerald-400">+{vault.currentRoi}%</span>
-            <span className="text-muted-foreground">/ {vault.targetRoi}%</span>
+      {/* Expanded Details */}
+      {expanded && (
+        <div className="border-t border-border/50 p-4 bg-muted/20 space-y-4">
+          <p className="text-sm text-muted-foreground">{vault.description}</p>
+
+          {/* Strategy */}
+          <div className="p-2 rounded-md bg-muted text-xs text-muted-foreground">
+            {vault.strategy}
           </div>
-          <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-              style={{ width: `${Math.min(roiPercent, 100)}%` }}
-            />
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Deposited</span>
+              <span>${vault.currentDeposit}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Cap</span>
+              <span>${vault.totalCap}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Start</span>
+              <span>{vault.startDate}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Est. Days</span>
+              <span>{vault.estimatedDays}d</span>
+            </div>
           </div>
+
+          {/* Deposit Button */}
+          {vault.status === "active" && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeposit(vault);
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-500 py-3 text-sm font-medium text-white hover:bg-indigo-600"
+            >
+              <DollarSign className="h-4 w-4" />
+              Deposit
+            </button>
+          )}
         </div>
-      </td>
-
-      {/* Est. Duration */}
-      <td className="px-4 py-4">
-        <span className="text-sm">{vault.estimatedDays}d</span>
-      </td>
-
-      {/* Your Position */}
-      <td className="px-4 py-4">
-        {vault.userDeposit && vault.userDeposit > 0 ? (
-          <div className="text-right">
-            <p className="font-medium">${vault.userDeposit}</p>
-            <p className="text-xs text-emerald-400">+${vault.userEarned?.toFixed(2)}</p>
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">-</span>
-        )}
-      </td>
-
-      {/* Action */}
-      <td className="px-4 py-4">
-        {vault.status === "active" && !isFull ? (
-          <button
-            onClick={() => onDeposit(vault)}
-            className="rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-indigo-600 hover:to-purple-700"
-          >
-            Deposit
-          </button>
-        ) : vault.status === "active" && isFull ? (
-          <span className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground">Full</span>
-        ) : vault.status === "closing" ? (
-          <span className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-400">
-            Closing
-          </span>
-        ) : (
-          <span className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground">Closed</span>
-        )}
-      </td>
-    </tr>
+      )}
+    </div>
   );
 }
 
-// Deposit Modal Component
+// Deposit Modal
 function DepositModal({
   vault,
   onClose,
@@ -176,108 +163,81 @@ function DepositModal({
   onClose: () => void;
 }) {
   const [amount, setAmount] = useState("");
-  const riskInfo = riskLevelInfo[vault.riskLevel];
-  const remainingCap = vault.totalCap - vault.currentDeposit;
+  const remaining = vault.totalCap - vault.currentDeposit;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Deposit to Vault</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-border bg-card">
+        {/* Header */}
+        <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card p-4">
+          <div>
+            <h2 className="text-lg font-bold">Deposit to Vault</h2>
+            <p className="text-sm text-muted-foreground">{vault.name}</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 hover:bg-muted">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-3 rounded-xl bg-muted/50 p-4">
-          <div className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-xl",
-            vault.riskLevel === "conservative" && "bg-emerald-500/20",
-            vault.riskLevel === "balanced" && "bg-blue-500/20",
-            vault.riskLevel === "growth" && "bg-amber-500/20",
-            vault.riskLevel === "aggressive" && "bg-red-500/20"
-          )}>
-            <Vault className={cn(
-              "h-6 w-6",
-              vault.riskLevel === "conservative" && "text-emerald-400",
-              vault.riskLevel === "balanced" && "text-blue-400",
-              vault.riskLevel === "growth" && "text-amber-400",
-              vault.riskLevel === "aggressive" && "text-red-400"
-            )} />
+        <div className="p-4 space-y-4">
+          {/* Vault Info */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+            <span className="text-sm text-emerald-400">Target ROI</span>
+            <span className="text-lg font-bold text-emerald-400">
+              {vault.targetRoi}%
+            </span>
           </div>
-          <div>
-            <h3 className="font-semibold">{vault.name}</h3>
-            <p className="text-sm text-muted-foreground">{riskInfo.label} Strategy</p>
-          </div>
-        </div>
 
-        <div className="mt-6 space-y-4">
+          {/* Amount Input */}
           <div>
-            <label className="mb-2 block text-sm font-medium">Amount (USDC)</label>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-3">
-              <DollarSign className="h-5 w-5 text-muted-foreground" />
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                max={remainingCap}
-                className="flex-1 bg-transparent text-lg font-medium outline-none"
-              />
+            <label className="block text-sm font-medium mb-2">Amount (USDC)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-lg font-semibold"
+            />
+            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+              <span>Available: ${remaining}</span>
+            </div>
+          </div>
+
+          {/* Quick Amount */}
+          <div className="grid grid-cols-4 gap-2">
+            {[10, 25, 50, 100].map((val) => (
               <button
-                onClick={() => setAmount(remainingCap.toString())}
-                className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80"
+                key={val}
+                onClick={() => setAmount(val.toString())}
+                className="rounded-lg border border-border py-2 text-sm hover:bg-muted"
               >
-                MAX
+                ${val}
               </button>
+            ))}
+          </div>
+
+          {/* Info */}
+          <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground space-y-1">
+            <div className="flex justify-between">
+              <span>Estimated Duration</span>
+              <span>{vault.estimatedDays} days</span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Remaining capacity: ${remainingCap}</span>
-              <span>Balance: $10,000</span>
+            <div className="flex justify-between">
+              <span>Risk Level</span>
+              <span className="capitalize">{vault.riskLevel}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/30 p-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Target ROI</p>
-              <p className="mt-1 font-semibold text-emerald-400">{vault.targetRoi}%</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Current ROI</p>
-              <p className="mt-1 font-semibold">{vault.currentRoi}%</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Est. Duration</p>
-              <p className="mt-1 font-semibold">{vault.estimatedDays} days</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Risk Level</p>
-              <p className={cn("mt-1 font-semibold", riskInfo.color.split(" ")[0])}>{riskInfo.label}</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 rounded-xl bg-indigo-500/10 p-3">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
-            <p className="text-xs text-indigo-400">
-              Vault auto-closes at {vault.targetRoi}% ROI. Your deposit and earnings will be returned automatically.
-            </p>
-          </div>
-
+          {/* Actions */}
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 rounded-xl border border-border py-3 font-medium transition-colors hover:bg-muted"
+              className="flex-1 rounded-lg border border-border py-3 text-sm font-medium hover:bg-muted"
             >
               Cancel
             </button>
-            <button
-              disabled={!amount || parseFloat(amount) <= 0}
-              className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 font-medium text-white transition-all hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50"
-            >
-              Deposit ${amount || "0"}
+            <button className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-indigo-500 py-3 text-sm font-medium text-white hover:bg-indigo-600">
+              Deposit
             </button>
           </div>
         </div>
@@ -286,393 +246,117 @@ function DepositModal({
   );
 }
 
-// Sortable Header Component
-function SortableHeader({
-  label,
-  sortKey,
-  currentSort,
-  onSort,
-}: {
-  label: string;
-  sortKey: SortKey;
-  currentSort: SortKey;
-  onSort: (key: SortKey) => void;
-}) {
-  const isActive = currentSort === sortKey;
-
-  return (
-    <button
-      onClick={() => onSort(sortKey)}
-      className={cn(
-        "flex items-center gap-1 text-left text-sm font-medium transition-colors",
-        isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-      )}
-    >
-      {label}
-      <ArrowUpDown className={cn("h-3.5 w-3.5", isActive && "text-indigo-400")} />
-    </button>
-  );
-}
-
 export default function VaultsPage() {
-  const [activeTab, setActiveTab] = useState<"active" | "history">("active");
-  const [sortKey, setSortKey] = useState<SortKey>("currentRoi");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [depositVault, setDepositVault] = useState<LPVault | null>(null);
   const [showClosed, setShowClosed] = useState(false);
-  const [depositModal, setDepositModal] = useState<LPVault | null>(null);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("desc");
-    }
-  };
+  const displayedVaults = useMemo(() => {
+    return showClosed
+      ? lpVaults
+      : lpVaults.filter((v) => v.status !== "completed");
+  }, [showClosed]);
 
-  const sortedVaults = useMemo(() => {
-    const filtered = showClosed ? lpVaults : lpVaults.filter((v) => v.status !== "completed");
-    const statusOrder: Record<string, number> = { active: 0, closing: 1, completed: 2 };
-
-    return [...filtered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortKey) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "totalCap":
-          comparison = a.currentDeposit - b.currentDeposit;
-          break;
-        case "currentRoi":
-          comparison = a.currentRoi - b.currentRoi;
-          break;
-        case "status":
-          comparison = statusOrder[a.status] - statusOrder[b.status];
-          break;
-        case "riskLevel":
-          comparison = riskOrder[a.riskLevel] - riskOrder[b.riskLevel];
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-  }, [sortKey, sortOrder, showClosed]);
+  // Stats
+  const totalTvl = lpVaults.reduce((sum, v) => sum + v.currentDeposit, 0);
+  const avgRoi =
+    lpVaults.reduce((sum, v) => sum + v.currentRoi, 0) / lpVaults.length;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border/50 bg-card/30 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Protocol Vaults</h1>
-            <p className="text-sm text-muted-foreground">
-              Data-driven LP strategies with auto-closing at 3% ROI
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5">
-              <span className="text-sm text-muted-foreground">Show Closed</span>
-              <button
-                onClick={() => setShowClosed(!showClosed)}
-                className={cn(
-                  "relative h-5 w-9 rounded-full transition-colors",
-                  showClosed ? "bg-indigo-500" : "bg-muted"
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform",
-                    showClosed && "translate-x-4"
-                  )}
-                />
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="border-b border-border/50 bg-card/30 px-4 py-4">
+        <h1 className="text-xl font-bold">Vaults</h1>
+        <p className="text-sm text-muted-foreground">
+          Managed LP strategies
+        </p>
       </div>
 
       {/* Content */}
-      <div className="p-6">
-        {/* Stats Overview */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </div>
-            <p className="mt-1 text-2xl font-bold">{vaultStats.totalVaultsCompleted}</p>
+      <div className="p-4 space-y-4">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+            <p className="text-xs text-muted-foreground">Total TVL</p>
+            <p className="text-lg font-bold">
+              ${(totalTvl / 1000000).toFixed(1)}M
+            </p>
           </div>
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-              <p className="text-sm text-muted-foreground">Avg ROI</p>
-            </div>
-            <p className="mt-1 text-2xl font-bold text-emerald-400">+{vaultStats.averageRoi}%</p>
+          <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+            <p className="text-xs text-muted-foreground">Avg ROI</p>
+            <p className="text-lg font-bold text-emerald-400">
+              {avgRoi.toFixed(1)}%
+            </p>
           </div>
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Avg Duration</p>
-            </div>
-            <p className="mt-1 text-2xl font-bold">{vaultStats.averageDuration} days</p>
-          </div>
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Processed</p>
-            </div>
-            <p className="mt-1 text-2xl font-bold">${vaultStats.totalValueProcessed.toLocaleString()}</p>
-          </div>
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-emerald-400" />
-              <p className="text-sm text-muted-foreground">Success Rate</p>
-            </div>
-            <p className="mt-1 text-2xl font-bold text-emerald-400">{vaultStats.successRate}%</p>
+          <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+            <p className="text-xs text-muted-foreground">Vaults</p>
+            <p className="text-lg font-bold">{lpVaults.length}</p>
           </div>
         </div>
 
-        {/* Stable Vault */}
-        <div className="mb-8">
-          <div className="mb-4 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-lg font-semibold">Insurance Hedge Vault</h2>
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-emerald-500/10">
-            <div className="grid lg:grid-cols-4">
-              {/* Vault Info */}
-              <div className="border-b border-emerald-500/20 p-6 lg:col-span-3 lg:border-b-0 lg:border-r">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold">{stableVault.name}</h3>
-                    <p className="mt-2 max-w-2xl text-muted-foreground">{stableVault.description}</p>
-                  </div>
-                  <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-medium text-emerald-400">
-                    {stableVault.token}
-                  </span>
-                </div>
-
-                <div className="mt-6 grid gap-6 sm:grid-cols-4">
-                  <div className="rounded-xl bg-emerald-500/10 p-4">
-                    <p className="text-xs text-emerald-400/70">Total Value Locked</p>
-                    <p className="mt-1 text-2xl font-bold">${(stableVault.tvl / 1000).toFixed(0)}K</p>
-                  </div>
-                  <div className="rounded-xl bg-emerald-500/10 p-4">
-                    <p className="text-xs text-emerald-400/70">Annual Yield</p>
-                    <p className="mt-1 text-2xl font-bold text-emerald-400">{stableVault.apy}%</p>
-                  </div>
-                  <div className="rounded-xl bg-emerald-500/10 p-4">
-                    <p className="text-xs text-emerald-400/70">Utilization</p>
-                    <p className="mt-1 text-2xl font-bold">{stableVault.utilization}%</p>
-                  </div>
-                  <div className="rounded-xl bg-emerald-500/10 p-4">
-                    <p className="text-xs text-emerald-400/70">Depositors</p>
-                    <p className="mt-1 text-2xl font-bold">342</p>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Pool Utilization</span>
-                    <span className="text-emerald-400">{stableVault.utilization}%</span>
-                  </div>
-                  <div className="mt-2 h-2 rounded-full bg-emerald-500/20">
-                    <div
-                      className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
-                      style={{ width: `${stableVault.utilization}%` }}
-                    />
-                  </div>
-                </div>
+        {/* Stable Vault Highlight */}
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-emerald-400" />
               </div>
-
-              {/* User Position */}
-              <div className="flex flex-col justify-between p-6">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground">Your Position</h4>
-                  <div className="mt-4 space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Deposited</p>
-                      <p className="text-2xl font-bold">${stableVault.userDeposit.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Earned</p>
-                      <p className="text-lg font-semibold text-emerald-400">+${stableVault.userEarned.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6 flex gap-2">
-                  <button className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-3 text-sm font-medium text-white transition-all hover:from-emerald-600 hover:to-emerald-700">
-                    Deposit
-                  </button>
-                  <button className="flex-1 rounded-xl border border-emerald-500/30 py-3 text-sm font-medium transition-colors hover:bg-emerald-500/10">
-                    Withdraw
-                  </button>
-                </div>
+              <div>
+                <h3 className="font-semibold">{stableVault.name}</h3>
+                <p className="text-xs text-emerald-400">No lock • Flexible</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* LP Vaults */}
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Vault className="h-5 w-5 text-indigo-400" />
-              <h2 className="text-lg font-semibold">LP Strategy Vaults</h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {sortedVaults.length}
-              </span>
-            </div>
-            <div className="flex rounded-lg border border-border bg-background p-1">
-              <button
-                onClick={() => setActiveTab("active")}
-                className={cn(
-                  "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                  activeTab === "active" ? "bg-muted" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={cn(
-                  "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                  activeTab === "history" ? "bg-muted" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                History
-              </button>
-            </div>
-          </div>
-
-          {activeTab === "active" ? (
-            <div className="overflow-hidden rounded-xl border border-border/50 bg-card/50">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border/50 bg-muted/30">
-                      <th className="px-4 py-3 text-left">
-                        <SortableHeader
-                          label="Vault"
-                          sortKey="name"
-                          currentSort={sortKey}
-                                                    onSort={handleSort}
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        <SortableHeader
-                          label="Risk"
-                          sortKey="riskLevel"
-                          currentSort={sortKey}
-                                                    onSort={handleSort}
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        <SortableHeader
-                          label="Status"
-                          sortKey="status"
-                          currentSort={sortKey}
-                                                    onSort={handleSort}
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        <SortableHeader
-                          label="Capacity"
-                          sortKey="totalCap"
-                          currentSort={sortKey}
-                                                    onSort={handleSort}
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left">
-                        <SortableHeader
-                          label="ROI"
-                          sortKey="currentRoi"
-                          currentSort={sortKey}
-                                                    onSort={handleSort}
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Est.</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Your Position</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedVaults.map((vault) => (
-                      <VaultRow
-                        key={vault.id}
-                        vault={vault}
-                        onDeposit={setDepositModal}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {sortedVaults.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Vault className="h-12 w-12 text-muted-foreground" />
-                  <p className="mt-4 text-muted-foreground">No vaults found</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-border/50 bg-card/50">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border/50 bg-muted/30">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Vault</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Strategy</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Final ROI</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Duration</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Total</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Completed</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vaultHistory.map((vault) => (
-                      <tr key={vault.id} className="border-b border-border/30 last:border-0">
-                        <td className="px-4 py-4 font-medium">{vault.vaultName}</td>
-                        <td className="px-4 py-4">
-                          <span className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
-                            riskLevelInfo[vault.strategy as keyof typeof riskLevelInfo]?.color
-                          )}>
-                            {vault.strategy}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <span className="font-semibold text-emerald-400">+{vault.finalRoi}%</span>
-                        </td>
-                        <td className="px-4 py-4 text-right">{vault.durationDays}d</td>
-                        <td className="px-4 py-4 text-right">${vault.totalDeposit}</td>
-                        <td className="px-4 py-4 text-right text-muted-foreground">{vault.completedDate}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Info Banner */}
-          <div className="mt-6 flex items-start gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
-            <Zap className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
-            <div className="text-sm">
-              <p className="font-medium text-indigo-400">How LP Vaults Work</p>
-              <p className="mt-1 text-muted-foreground">
-                Each vault has a <strong>$100 total capacity</strong>. Multiple users deposit until full.
-                At <strong>3% ROI</strong>, the vault auto-closes and returns deposits + earnings proportionally.
+            <div className="text-right">
+              <p className="text-2xl font-bold text-emerald-400">
+                {stableVault.apy}%
               </p>
+              <p className="text-xs text-muted-foreground">APY</p>
             </div>
           </div>
+          <button className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-500 py-2.5 text-sm font-medium text-white hover:bg-emerald-600">
+            <DollarSign className="h-4 w-4" />
+            Deposit Stable
+          </button>
         </div>
+
+        {/* Filter */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">LP Vaults</h2>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showClosed}
+              onChange={(e) => setShowClosed(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-muted-foreground">Show closed</span>
+          </label>
+        </div>
+
+        {/* Vault Cards */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {displayedVaults.map((vault) => (
+            <VaultCard
+              key={vault.id}
+              vault={vault}
+              onDeposit={setDepositVault}
+            />
+          ))}
+        </div>
+
+        {displayedVaults.length === 0 && (
+          <div className="py-12 text-center">
+            <Vault className="h-12 w-12 mx-auto text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">No vaults found</p>
+          </div>
+        )}
       </div>
 
       {/* Deposit Modal */}
-      {depositModal && (
-        <DepositModal vault={depositModal} onClose={() => setDepositModal(null)} />
+      {depositVault && (
+        <DepositModal
+          vault={depositVault}
+          onClose={() => setDepositVault(null)}
+        />
       )}
     </div>
   );

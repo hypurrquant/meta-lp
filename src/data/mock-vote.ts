@@ -31,12 +31,18 @@ export interface VotePool {
   lastCuratedDate?: string;
 }
 
+export interface SubscriptionInfo {
+  isSubscribed: boolean;
+  plan: "free" | "pro" | "premium" | null;
+  expiresAt: string | null;
+  hasVotingRight: boolean;
+}
+
 export interface UserVoteInfo {
-  totalVotingPower: number;
+  subscription: SubscriptionInfo;
+  totalVotingPower: number; // 1 vote per subscriber
   usedVotingPower: number;
   availableVotingPower: number;
-  stakedAmount: number;
-  stakingApy: number;
   totalRewardsEarned: number;
   pendingRewards: number;
   votingPositions: {
@@ -251,19 +257,36 @@ export const votePools: VotePool[] = [
 ];
 
 export const userVoteInfo: UserVoteInfo = {
-  totalVotingPower: 15000,
-  usedVotingPower: 11500,
-  availableVotingPower: 3500,
-  stakedAmount: 5000,
-  stakingApy: 12.5,
+  subscription: {
+    isSubscribed: true,
+    plan: "pro",
+    expiresAt: "2025-01-15",
+    hasVotingRight: true,
+  },
+  totalVotingPower: 1, // 1 vote per subscriber
+  usedVotingPower: 1,
+  availableVotingPower: 0,
   totalRewardsEarned: 892.50,
   pendingRewards: 45.25,
   votingPositions: [
-    { poolId: "vote-1", votes: 5000, percentage: 33.3 },
-    { poolId: "vote-3", votes: 3000, percentage: 20.0 },
-    { poolId: "vote-5", votes: 2000, percentage: 13.3 },
-    { poolId: "vote-6", votes: 1500, percentage: 10.0 },
+    { poolId: "vote-1", votes: 1, percentage: 100 },
   ],
+};
+
+// Example of non-subscribed user
+export const freeUserVoteInfo: UserVoteInfo = {
+  subscription: {
+    isSubscribed: false,
+    plan: "free",
+    expiresAt: null,
+    hasVotingRight: false,
+  },
+  totalVotingPower: 0,
+  usedVotingPower: 0,
+  availableVotingPower: 0,
+  totalRewardsEarned: 0,
+  pendingRewards: 0,
+  votingPositions: [],
 };
 
 export const rewardHistory: RewardHistory[] = [
